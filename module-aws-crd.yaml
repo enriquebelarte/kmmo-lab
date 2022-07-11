@@ -1,0 +1,54 @@
+apiVersion: ooto.sigs.k8s.io/v1alpha1
+kind: Module
+metadata:
+  name: ooto-ci-a
+spec:
+  driverContainer: # is a Container spec
+    # This container will not be privileged by default.
+    # It will mount /lib/modules and /usr/lib/modules automatically.
+    name: overwritten-anyway
+    command: [sleep, infinity]
+    lifecycle:
+      postStart:
+        exec:
+          command: [modprobe, -vd, /opt, ooto_ci_a]
+      preStop:
+        exec:
+          command: [modprobe, -rvd, /opt, ooto_ci_a]
+    securityContext:
+      capabilities:
+        add: [SYS_MODULE] # this is enough in most cases
+  kernelMappings:
+    - literal: 5.10.118-111.515.amzn2.x86_64 
+      build:
+        pull:
+          insecure: false 
+        push:
+          insecure: true
+        dockerfile: |
+          ARG KERNEL_VERSION='' 
+          FROM amazonlinux as builder
+          RUN amazon-linux-extras install kernel-5.10 -y 
+          #RUN yum -y group install "Development Tools"
+          RUN yum -y install python3 git make gcc bison flex elfutils-libelf-devel linux-headers openssl-devel xz yum-utils bc && yum clean all
+          RUN yumdownloader --source kernel && rpm -ivh kernel-5.10.118*
+          RUN git clone https://github.com/enriquebelarte/oot-operator.git
+          WORKDIR oot-operator/ci/ooto-kmod
+          RUN tar xf /root/rpmbuild/SOURCES/linux-5.10.118.tar
+          RUN yes "" | make -C linux-5.10.118 oldconfig
+          #RUN cd linux-5.10.118 && for p in `ls -v /root/rpmbuild/SOURCES/*.patch`; do patch -p1 < $p; done 
+          RUN make -C linux-5.10.118 modules_prepare
+          RUN make KERNEL_SRC_DIR=linux-5.10.118 M=$PWD
+ 
+          FROM amazonlinux 
+          RUN yum -y install kmod && yum clean all
+          RUN amazon-linux-extras install kernel-5.10
+          ARG KERNEL_VERSION
+          RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
+          RUN echo "kernel version is" ${KERNEL_VERSION}
+          COPY --from=builder /oot-operator/ci/ooto-kmod/ooto_ci_a.ko /opt/lib/modules/${KERNEL_VERSION}/
+          COPY --from=builder /oot-operator/ci/ooto-kmod/ooto_ci_b.ko /opt/lib/modules/${KERNEL_VERSION}/
+          RUN depmod -b /opt
+      containerImage: registry-nodeport.kube-system.svc.cluster.local:5000/aws-ooto-test:1.6.4
+  selector:  
+    kubernetes.io/hostname: ip-10-0-0-34.eu-west-3.compute.internal 
