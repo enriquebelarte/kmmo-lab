@@ -39,7 +39,7 @@ spec:
               #RUN amazon-linux-extras install kernel-5.4
               ARG KERNEL_VERSION
               RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
-              COPY --from=builder /usr/lib/modules/${KERNEL_VERSION}/other/silly.ko /opt/lib/modules/${KERNEL_VERSION}/
+              COPY --from=builder /lib/modules/5.4.196-108.356.amzn2.x86_64/kernel/drivers/other/silly/ /opt/lib/modules/${KERNEL_VERSION}/
               RUN depmod -b /opt
     imageRepoSecret: 
       name: aws-ecr   
