@@ -1,0 +1,45 @@
+apiVersion: ooto.sigs.k8s.io/v1alpha1
+kind: Module
+metadata:
+  name: ice 
+spec:
+  driverContainer:
+    container:
+      modprobe:
+        moduleName: ice
+      kernelMappings:
+        - literal: 5.4.196-108.356.amzn2.x86_64
+          containerImage: 804517629211.dkr.ecr.eu-west-3.amazonaws.com/ice-kmod:1.4
+          build:
+            buildArgs:
+              - name: CI_BUILD_ARG
+                value: some-build-arg
+            pull:
+              insecure: false
+            push:
+              insecure: false
+              #secrets:
+              #- name: build-secret
+            dockerfile: |
+              ARG KERNEL_VERSION=''
+              FROM amazonlinux as builder
+              RUN amazon-linux-extras install kernel-5.4 -y
+              RUN yum -y install kernel-headers-5.4.196-108.356.amzn2.x86_64 kernel-5.4.196-108.356.amzn2.x86_64 kernel-devel-5.4.196-108.356.amzn2.x86_64 python3 git make gcc bison flex elfutils-libelf-devel linux-headers openssl-devel xz yum-utils bc && yum clean all
+              RUN curl -L https://sourceforge.net/projects/e1000/files/ice%20stable/1.8.9/ice-1.8.9.tar.gz/download > ice-1.8.9.tar.gz
+              RUN tar xfz ice-1.8.9.tar.gz
+              WORKDIR ice-1.8.9/src
+              RUN KSRC=/lib/modules/5.4.196-108.356.amzn2.x86_64/build make  
+
+    
+              FROM amazonlinux
+              RUN yum -y install kmod && yum clean all
+              #RUN amazon-linux-extras install kernel-5.4
+              ARG KERNEL_VERSION
+              RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
+              COPY --from=builder /ice-1.8.9/src/ice.ko /opt/lib/modules/${KERNEL_VERSION}/
+              RUN depmod -b /opt
+    imageRepoSecret: 
+      name: aws-ecr   
+  selector:  
+    kubernetes.io/hostname: ip-192-168-13-20.eu-west-3.compute.internal
+
