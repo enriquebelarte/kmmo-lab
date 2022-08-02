@@ -1,15 +1,15 @@
 apiVersion: ooto.sigs.k8s.io/v1alpha1
 kind: Module
 metadata:
-  name: silly-dkms
+  name: ice-dkms
 spec:
   driverContainer:
     container:
       modprobe:
-        moduleName: silly
+        moduleName: ice
       kernelMappings:
         - literal: 5.4.196-108.356.amzn2.x86_64
-          containerImage: 804517629211.dkr.ecr.eu-west-3.amazonaws.com/silly-kmod:1.7
+          containerImage: 804517629211.dkr.ecr.eu-west-3.amazonaws.com/ice-kmod:1.6-dkms
           build:
             buildArgs:
               - name: CI_BUILD_ARG
@@ -24,22 +24,19 @@ spec:
               FROM amazonlinux as builder
               RUN amazon-linux-extras install kernel-5.4 -y
               RUN yum install -y kernel-headers-5.4.196-108.356.amzn2.x86_64 kernel-5.4.196-108.356.amzn2.x86_64 kernel-devel-5.4.196-108.356.amzn2.x86_64 install dkms python3 git make gcc bison flex elfutils-libelf-devel openssl-devel xz yum-utils bc && yum clean all
-              WORKDIR usr/src 
-              RUN git clone https://github.com/enriquebelarte/silly-kmod.git  
-              RUN mv silly-kmod silly-0.1
+              WORKDIR /usr/src
+              RUN curl -L https://sourceforge.net/projects/e1000/files/ice%20stable/1.8.9/ice-1.8.9.tar.gz/download > ice-1.8.9.tar.gz
+              RUN tar xfvz ice-1.8.9.tar.gz
               RUN git clone https://github.com/enriquebelarte/dkms-ooto.git
-              RUN cp dkms-ooto/dkms.conf silly-0.1
-              RUN dkms add silly/0.1
-              RUN dkms build silly/0.1 
-              RUN dkms install silly/0.1
-     
+              RUN cp dkms-ooto/dkms-ice.conf ice-1.8.9/dkms.conf
+              RUN dkms add -m ice -v 1.8.9 && dkms build -m ice -v 1.8.9 dkms install -m ice -v 1.8.9
 
               FROM amazonlinux 
               RUN yum -y install kmod dkms && yum clean all
               #RUN amazon-linux-extras install kernel-5.4
               ARG KERNEL_VERSION
               RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
-              COPY --from=builder /lib/modules/5.4.196-108.356.amzn2.x86_64/kernel/drivers/other/silly/ /opt/lib/modules/${KERNEL_VERSION}/
+              COPY --from=builder /lib/modules/5.4.196-108.356.amzn2.x86_64/updates/drivers/net/ethernet/intel/ice.ko /opt/lib/modules/${KERNEL_VERSION}/
               RUN depmod -b /opt
     imageRepoSecret: 
       name: aws-ecr   

@@ -1,0 +1,46 @@
+apiVersion: ooto.sigs.k8s.io/v1alpha1
+kind: Module
+metadata:
+  name: ooto-ci-a
+spec:
+  driverContainer:
+    container:
+      modprobe:
+        moduleName: ooto-ci-a 
+
+      kernelMappings:
+        - literal: 5.4.196-108.356.amzn2.x86_64
+          containerImage: 804517629211.dkr.ecr.eu-west-3.amazonaws.com/ooto-kmod:1.0-dkms
+          build:
+            buildArgs:
+              - name: CI_BUILD_ARG
+                value: some-build-arg
+            pull:
+              insecure: false
+            push:
+              insecure: false
+              #secrets:
+              #- name: build-secret
+            dockerfile: |
+              ARG KERNEL_VERSION=''
+              FROM amazonlinux as builder
+              RUN amazon-linux-extras install kernel-5.4 -y
+              RUN yum -y install dkms kernel-headers-5.4.196-108.356.amzn2.x86_64 kernel-5.4.196-108.356.amzn2.x86_64 kernel-devel-5.4.196-108.356.amzn2.x86_64 python3 git make gcc bison flex elfutils-libelf-devel linux-headers openssl-devel xz yum-utils bc && yum clean all
+              WORKDIR /usr/src
+              RUN git clone https://github.com/enriquebelarte/ooto-kmod
+              RUN mv ooto-kmod ooto-kmod-0.0.1
+              RUN dkms add ooto-kmod/0.0.1
+              RUN dkms build ooto-kmod/0.0.1
+              RUN dkms install ooto-kmod/0.0.1
+    
+              FROM amazonlinux
+              RUN yum -y install kmod && yum clean all
+              ARG KERNEL_VERSION
+              RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
+              COPY --from=builder /lib/modules/5.4.196-108.356.amzn2.x86_64/kernel/drivers/other/ooto/ /opt/lib/modules/${KERNEL_VERSION}/
+              RUN depmod -b /opt
+    imageRepoSecret: 
+      name: aws-ecr   
+  selector:  
+    kubernetes.io/hostname: ip-192-168-13-20.eu-west-3.compute.internal
+
