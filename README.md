@@ -7,5 +7,5 @@ KMMO (https://github.com/qbarrand/oot-operator)
 Tests with :
 - EKS Cluster in Amazon Web Services
 - GKE Cluster in Google Cloud
-- Vanilla Kubernetes with Ubuntu Worker Nodes
+- Vanilla Kubernetes with Ubuntu Nodes
 
