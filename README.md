@@ -13,4 +13,4 @@ Taking for granted that EKS service at AWS should run by default Amazon Linux v2
 Kernel Management Module deploys at nodes labeled as 'node-role.kubernetes.io/master=' but Control Plane (master) in EKS nodes do not allow workloads per design as these nodes are managed by AWS so user should label worker nodes with said label to make deploy work.
 
 # Notes on Google Kubernetes Engine (GKE)
-AutoPilot Clusters do limit what NodeSelectors and Linux Capabilities may be used in deployments, so deployments of KMMO in GKE platform should be done in standard clusters.
+AutoPilot Clusters do limit what NodeSelectors and Linux Capabilities may be used in deployments, so deployments of KMMO in GKE platform should be done in standard clusters although same thing happens about Control Plane (master) not allowing labeling and/or user workloads. Labeling a worker node as 'node-role.kubernetes.io/master=' is needed before deploying the controller manager.
