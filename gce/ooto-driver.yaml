@@ -9,8 +9,8 @@ spec:
         moduleName: ooto-ci-a 
 
       kernelMappings:
-        - literal: 5.4.196-108.356.amzn2.x86_64
-          containerImage: 804517629211.dkr.ecr.eu-west-3.amazonaws.com/ooto-kmod:1.53
+        - literal: 5.10.109 
+          containerImage: europe-southwest1-docker.pkg.dev/assisted-installer/kmmo-lab/oot-operator:1.0-ootokmod 
           build:
             buildArgs:
               - name: CI_BUILD_ARG
@@ -23,23 +23,28 @@ spec:
               #- name: build-secret
             dockerfile: |
               ARG KERNEL_VERSION=''
-              FROM amazonlinux as builder
-              RUN amazon-linux-extras install kernel-5.4 -y
-              RUN yum -y install kernel-headers-5.4.196-108.356.amzn2.x86_64 kernel-5.4.196-108.356.amzn2.x86_64 kernel-devel-5.4.196-108.356.amzn2.x86_64 python3 git make gcc bison flex elfutils-libelf-devel linux-headers openssl-devel xz yum-utils bc && yum clean all
-              RUN git clone https://github.com/enriquebelarte/ooto-kmod
-              WORKDIR ooto-kmod 
-              RUN make 
+              FROM debian:stable-slim as builder
+              RUN apt-get update && apt-get install -y bc bison flex libelf-dev gnupg wget git make bc gcc
+              RUN kv=${1:-v"$(uname -r | sed -E 's/\+*$//')"} && wget "https://chromium.googlesource.com/chromiumos/third_party/kernel/+archive/$kv.tar.gz" && mkdir -p /src/kernel && tar xzf "$kv.tar.gz" -C /src/kernel
+              WORKDIR /src/kernel
+              RUN gunzip < /proc/config.gz > .config
+              RUN yes "" | make oldconfig && make prepare && make scripts
+              RUN git clone https://github.com/enriquebelarte/ooto-kmod.git
+
+
+              WORKDIR ooto-kmod
+              RUN make -C /src/kernel
+
     
-              FROM amazonlinux
-              RUN yum -y install kmod && yum clean all
-              #RUN amazon-linux-extras install kernel-5.4
+              FROM debian:stable-slim 
+              RUN apt-get update && apt-get install kmod
               ARG KERNEL_VERSION
               RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
-              COPY --from=builder /ooto-kmod/ooto_ci_a.ko /opt/lib/modules/${KERNEL_VERSION}/
-              COPY --from=builder /ooto-kmod/ooto_ci_b.ko /opt/lib/modules/${KERNEL_VERSION}/
+              COPY --from=builder /src/kernel/ooto-kmod/ooto_ci_a.ko /opt/lib/modules/${KERNEL_VERSION}/
+              COPY --from=builder /src/kernel/ooto-kmod/ooto_ci_b.ko /opt/lib/modules/${KERNEL_VERSION}/
               RUN depmod -b /opt
     imageRepoSecret: 
       name: aws-ecr   
   selector:  
-    kubernetes.io/hostname: ip-192-168-13-20.eu-west-3.compute.internal
+    kubernetes.io/hostname: gke-kmmo-lab-cluster-default-pool-073f8f9f-d5xl 
 
