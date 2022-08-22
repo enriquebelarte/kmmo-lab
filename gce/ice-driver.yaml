@@ -1,0 +1,49 @@
+apiVersion: ooto.sigs.k8s.io/v1alpha1
+kind: Module
+metadata:
+  name: ice 
+spec:
+  driverContainer:
+    container:
+      modprobe:
+        moduleName: ice
+      kernelMappings:
+        #- literal: 5.10.109
+        - regexp: '^5\.10\.109\+?$'
+          containerImage: quay.io/ebelarte/kmmo-lab/oot-operator:1.0-ice
+          build:
+            pull:
+              insecure: false
+            push:
+              insecure: false
+            dockerfile: |
+              ARG KERNEL_VERSION=''
+              #FROM debian:stable-slim as builder
+              FROM marketplace.gcr.io/google/debian10:latest
+              RUN apt-get update && apt-get install -y bc bison flex libelf-dev gnupg wget git make bc gcc
+              RUN kv=${1:-v"$(uname -r | sed -E 's/\+*$//')"} && wget "https://chromium.googlesource.com/chromiumos/third_party/kernel/+archive/$kv.tar.gz" && mkdir -p /src/kernel && tar xzf "$kv.tar.gz" -C /src/kernel
+              WORKDIR /src/kernel
+              RUN gunzip < /proc/config.gz > .config
+              RUN yes "" | make oldconfig && make prepare && make scripts
+
+              WORKDIR /usr/src
+              RUN curl -L https://sourceforge.net/projects/e1000/files/ice%20stable/1.8.9/ice-1.8.9.tar.gz/download > ice-1.8.9.tar.gz
+              RUN tar xfz ice-1.8.9.tar.gz
+              WORKDIR /usr/src/ice-1.8.9/src
+              RUN make
+
+    
+              FROM marketplace.gcr.io/google/debian10:latest 
+              RUN apt-get update && apt-get install kmod
+              ARG KERNEL_VERSION
+
+              RUN mkdir -p /opt/lib/modules/${KERNEL_VERSION}
+              COPY --from=builder /usr/src/ice-1.8.9/src/ice.ko /opt/lib/modules/${KERNEL_VERSION}/
+              RUN depmod -b /opt
+
+    imageRepoSecret: 
+      name: quay-eb   
+  selector:  
+    kubernetes.io/hostname: gke-kmmo-lab-cluster-default-pool-073f8f9f-d5xl 
+
+
