@@ -11,10 +11,10 @@ Platforms :
 ## Notes on Elastic Kubernetes Service (EKS)
 
 Elastic Kubernetes Service(EKS) at AWS run by default worker nodes based on Amazon Linux v2 (Ubuntu and maybe others could also be used and examples will be provided in such directory).
-Kernel Management Module deploys at nodes labeled as `node-role.kubernetes.io/master=` but Control Plane (master) in EKS nodes do not allow custom workloads per design as these nodes are managed by AWS.
+Kernel Management Module deploys at nodes labeled as `node-role.kubernetes.io/master=` or `node-role.kubernetes.io/control-plane=` but Control Plane (master) in EKS nodes do not allow custom workloads per design as these nodes are managed by AWS.
 So as a user workaround we could label worker nodes with said key to make deploy work.
 
-As underlying OS in nodes is https://github.com/awslabs/amazon-eks-ami which is based in Amazon Linux v2, using amazonlinux images as builder images is the easiest way to match kernel versions between hosts and builders. Also Amazon Linux repositories keep a pretty extensive package archive of different headers versions which is really useful when dealing with not so updated EKS nodes.
+As underlying OS in nodes is [Amazon EKS Linux](https://github.com/awslabs/amazon-eks-ami) which is based in Amazon Linux v2, using amazonlinux images as builder images is the easiest way to match kernel versions between hosts and builders. Also Amazon Linux repositories keep a pretty extensive package archive of different headers versions which is really useful when dealing with not so updated EKS nodes.
 
 At sometime in a near future AL2022 wil be released as an official Amazon Linux OS. It will be based on Fedora Linux and will have SELinux enabled by default so probably changes should be made to examples accordingly:
 [Amazon Linux 2022](https://docs.aws.amazon.com/linux/al2022/release-notes/planned-changes.html)
@@ -44,9 +44,10 @@ In Standard GKE clusters Control Plane (master) is administered by Google so lab
 
 Underlying OS in nodes running at GKE is Container-Optimized OS by default but it could be Ubuntu also.
 
-
+[WIP section]
 ## Notes on Ubuntu Bare Metal Cluster
 
 Examples in Ubuntu directory are based on a bare-metal cluster with Ubuntu 22.04 LTS nodes. 
 
+[WIP section]
 
