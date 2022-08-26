@@ -6,7 +6,7 @@ By installing the controller in a Kubernetes cluster we will get a new NameSpace
 
 Once the ReplicaSet is running we can create and use a new Module object which will manage the build and/or run of a kernel module.
 
-In this document we will find examples and YAML files including in-cluster module building, device plugins and use of module loaders with [KMM](https://github.com/qbarrand/oot-operator) for different Kubernetes environments : [EKS](aws), GKE(gce), Azure, Ubuntu(ubuntu). 
+In this document we will find examples and YAML files including in-cluster module building, device plugins and use of module loaders with [KMM](https://github.com/qbarrand/oot-operator) for different Kubernetes environments : [EKS](aws), [GKE](gce), Azure, [Ubuntu bare metal](ubuntu). 
 
 ## Installation
 
